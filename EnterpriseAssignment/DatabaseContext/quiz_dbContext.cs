@@ -22,6 +22,8 @@ namespace EnterpriseAssignment.DatabaseContext
         public virtual DbSet<Question> Questions { get; set; }
         public virtual DbSet<Session> Sessions { get; set; }
 
+        public virtual DbSet<SessionQuestion> SessionQuestions { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasCharSet("utf8mb4")
@@ -116,6 +118,20 @@ namespace EnterpriseAssignment.DatabaseContext
                     .HasColumnName("name");
 
                 entity.Property(e => e.Score).HasColumnName("score");
+            });
+
+            modelBuilder.Entity<SessionQuestion>(entity =>
+            {
+                entity.HasKey(e => e.Idsessionquestion)
+                    .HasName("PRIMARY");
+
+                entity.ToTable("sessionQuestion");
+
+                entity.Property(e => e.Iduser).HasColumnName("iduser");
+
+                entity.Property(e => e.Idquestion).HasColumnName("idquestion");
+
+                entity.Property(e => e.OrderIndex).HasColumnName("orderIndex");
             });
 
             OnModelCreatingPartial(modelBuilder);

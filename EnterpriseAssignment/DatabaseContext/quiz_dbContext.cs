@@ -103,9 +103,7 @@ namespace EnterpriseAssignment.DatabaseContext
 
                 entity.ToTable("session");
 
-                entity.Property(e => e.Iduser)
-                    .ValueGeneratedNever()
-                    .HasColumnName("iduser");
+                entity.Property(e => e.Iduser).HasColumnName("iduser");
 
                 entity.Property(e => e.CurrentQuestion)
                     .HasMaxLength(45)

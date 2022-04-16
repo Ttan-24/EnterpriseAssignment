@@ -7,10 +7,11 @@ namespace EnterpriseAssignment.DatabaseContext
 {
     public partial class Session
     {
-        public int Iduser { get; set; }
+        public int Idsession { get; set; }
         public string Name { get; set; }
         public int? Idcategory { get; set; }
         public int? Score { get; set; }
-        public string CurrentQuestion { get; set; }
+        public string UnusedColumn { get; set; }
+        public int CurrentQuestionIndex { get; set; }
     }
 }

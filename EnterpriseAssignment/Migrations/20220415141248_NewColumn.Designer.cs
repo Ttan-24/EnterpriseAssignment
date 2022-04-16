@@ -3,14 +3,16 @@ using System;
 using EnterpriseAssignment.DatabaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EnterpriseAssignment.Migrations
 {
     [DbContext(typeof(quiz_dbContext))]
-    partial class quiz_dbContextModelSnapshot : ModelSnapshot
+    [Migration("20220415141248_NewColumn")]
+    partial class NewColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

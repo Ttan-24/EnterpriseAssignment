@@ -46,7 +46,7 @@ namespace EnterpriseAssignment.DatabaseContext
 
                 entity.Property(e => e.Idquestion).HasColumnName("idquestion");
 
-                entity.Property(e => e.Iduser).HasColumnName("iduser");
+                entity.Property(e => e.Idsession).HasColumnName("idsession");
             });
 
             modelBuilder.Entity<Category>(entity =>
@@ -100,16 +100,14 @@ namespace EnterpriseAssignment.DatabaseContext
 
             modelBuilder.Entity<Session>(entity =>
             {
-                entity.HasKey(e => e.Iduser)
+                entity.HasKey(e => e.Idsession)
                     .HasName("PRIMARY");
 
                 entity.ToTable("session");
 
-                entity.Property(e => e.Iduser).HasColumnName("iduser");
+                entity.Property(e => e.Idsession).HasColumnName("idsession");
 
-                entity.Property(e => e.CurrentQuestion)
-                    .HasMaxLength(45)
-                    .HasColumnName("current_question");
+                entity.Property(e => e.UnusedColumn).HasMaxLength(45).HasColumnName("unused_column");
 
                 entity.Property(e => e.Idcategory).HasColumnName("idcategory");
 
@@ -118,6 +116,8 @@ namespace EnterpriseAssignment.DatabaseContext
                     .HasColumnName("name");
 
                 entity.Property(e => e.Score).HasColumnName("score");
+
+                entity.Property(e => e.CurrentQuestionIndex).HasColumnName("current_question_index");
             });
 
             modelBuilder.Entity<SessionQuestion>(entity =>
@@ -127,7 +127,9 @@ namespace EnterpriseAssignment.DatabaseContext
 
                 entity.ToTable("sessionQuestion");
 
-                entity.Property(e => e.Iduser).HasColumnName("iduser");
+                entity.Property(e => e.Idsessionquestion).HasColumnName("idsessionquestion");
+
+                entity.Property(e => e.Idsession).HasColumnName("idsession");
 
                 entity.Property(e => e.Idquestion).HasColumnName("idquestion");
 

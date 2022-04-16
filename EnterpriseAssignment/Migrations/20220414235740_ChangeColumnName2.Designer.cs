@@ -3,14 +3,16 @@ using System;
 using EnterpriseAssignment.DatabaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EnterpriseAssignment.Migrations
 {
     [DbContext(typeof(quiz_dbContext))]
-    partial class quiz_dbContextModelSnapshot : ModelSnapshot
+    [Migration("20220414235740_ChangeColumnName2")]
+    partial class ChangeColumnName2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -110,9 +112,10 @@ namespace EnterpriseAssignment.Migrations
                         .HasColumnType("int")
                         .HasColumnName("idsession");
 
-                    b.Property<int>("CurrentQuestionIndex")
-                        .HasColumnType("int")
-                        .HasColumnName("current_question_index");
+                    b.Property<string>("CurrentQuestionIndex")
+                        .HasMaxLength(45)
+                        .HasColumnType("varchar(45)")
+                        .HasColumnName("current_question");
 
                     b.Property<int?>("Idcategory")
                         .HasColumnType("int")
@@ -126,11 +129,6 @@ namespace EnterpriseAssignment.Migrations
                     b.Property<int?>("Score")
                         .HasColumnType("int")
                         .HasColumnName("score");
-
-                    b.Property<string>("UnusedColumn")
-                        .HasMaxLength(45)
-                        .HasColumnType("varchar(45)")
-                        .HasColumnName("unused_column");
 
                     b.HasKey("Idsession")
                         .HasName("PRIMARY");

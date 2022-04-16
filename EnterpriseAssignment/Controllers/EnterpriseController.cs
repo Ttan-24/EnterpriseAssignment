@@ -38,17 +38,49 @@ namespace EnterpriseAssignment.Controllers
         {
             // Get database table
             var dbSessions = context.Sessions;
+            var questions = context.Questions.Where(q => q.Idcategory == _categoryId).ToList();
+            var dbSessionQuestions = context.SessionQuestions;
 
             // Get answer from http
             Session mySession = new Session();
             mySession.Name = _username;
             mySession.Score = 0;
             mySession.Idcategory = _categoryId;
+            mySession.CurrentQuestionIndex = 0;
 
             // Add to table
             dbSessions.Add(mySession);
 
             // Save changes
+            context.SaveChanges();
+
+            // Get session again now that it has a userId
+            Session newSession = context.Sessions.Where(s => s.Name == _username).ToList().First();
+
+            // Create questions for session
+            List<SessionQuestion> sessionQuestions = new List<SessionQuestion>();
+            for (int i = 0; i < questions.Count; i++)
+            {
+                // Get question
+                Question question = questions[i];
+
+                // Create session question
+                SessionQuestion sessionQuestion = new SessionQuestion();
+                sessionQuestion.Idsession = newSession.Idsession;
+                sessionQuestion.Idquestion = question.Idquestion;
+                sessionQuestion.OrderIndex = i;
+
+                // Add to list
+                sessionQuestions.Add(sessionQuestion);
+            }
+
+            // Add new session questions
+            foreach (SessionQuestion sessionQuestion in sessionQuestions)
+            {
+                dbSessionQuestions.Add(sessionQuestion);
+            }
+
+            // Save again
             context.SaveChanges();
 
             // Return
@@ -57,51 +89,56 @@ namespace EnterpriseAssignment.Controllers
 
         [HttpGet] // attribute
         [Route("question")]
-        public IActionResult GetQuestion(int _categoryId, int _questionIndex)
+        public IActionResult GetQuestion(int _sessionID)
         {
-            // Get question
-            var questions = context.Questions.Where(q => q.Idcategory == _categoryId).ToList();
-            for (int i = 0; i < questions.Count; i++)
-            {
-                Question question = questions[i];
-                if (i == _questionIndex-1)
-                {
-                    return Ok(question);
-                }
-            }
+            // Get session
+            Session dbSession = context.Sessions.Where(session => session.Idsession == _sessionID).FirstOrDefault();
 
-            // Question not found
-            return Ok(null);
+            // Get question
+            SessionQuestion sessionQuestion = context.SessionQuestions
+                .Where(q => q.Idsession == dbSession.Idsession)
+                .Where(q => q.OrderIndex == dbSession.CurrentQuestionIndex)
+                .ToList().FirstOrDefault();
+
+            // Return question
+            return Ok(sessionQuestion);
         }
 
         [HttpPut]
         [Route("answers")]
-        public IActionResult PostAnswer(string _answerCharacter, int _idQuestion, int _idCategory, int _idUser)
+        public IActionResult PostAnswer(int _sessionID, string _answerCharacter)
         {
-            // Get database table
-            var dbAnswers = context.Answers;
+            // Get session
+            Session dbSession = context.Sessions.Where(session => session.Idsession == _sessionID).FirstOrDefault();
 
-            // Get answer from http
-            Answer myAnswer = new Answer();
-            myAnswer.AnswerCharacter = _answerCharacter;
-            myAnswer.Idanswer = 0;
-            myAnswer.Idquestion = _idQuestion;
-            myAnswer.Idcategory = _idCategory;
-            myAnswer.Iduser = _idUser;
+            // Get session question
+            SessionQuestion dbSessionQuestion = context.SessionQuestions
+                .Where(q => q.Idsession == dbSession.Idsession)
+                .Where(q => q.OrderIndex == dbSession.CurrentQuestionIndex)
+                .FirstOrDefault();
 
-            // Add to table
-            dbAnswers.Add(myAnswer);
+            // Get question
+            Question dbQuestion = context.Questions.Where(q => q.Idquestion == dbSessionQuestion.Idquestion).FirstOrDefault();
+
+            // Increase score
+            if (dbQuestion.CorrectAnswer == _answerCharacter)
+            {
+                dbSession.Score++;
+            }
+
+            // Increment question
+            dbSession.CurrentQuestionIndex++;
 
             // Save changes
             context.SaveChanges();
 
             // Return
-            return Ok(dbAnswers);
+            return Ok(dbSession);
         }
 
         [HttpPatch] // attribute
         [Route("score")]
-        public IActionResult UpdateHighScore(int _idUser)
+        public IActionResult UpdateHighScore(int _idsession)
         {
             // Get tables
             var dbAnswers = context.Answers.ToList<Answer>();
@@ -114,7 +151,7 @@ namespace EnterpriseAssignment.Controllers
             {
                 foreach (var question in dbQuestions)
                 {
-                    if (answer.Iduser == _idUser &&
+                    if (answer.Idsession == _idsession &&
                         answer.Idquestion == question.Idquestion &&
                         answer.Idcategory == question.Idcategory &&
                         answer.AnswerCharacter == question.CorrectAnswer)
@@ -127,7 +164,7 @@ namespace EnterpriseAssignment.Controllers
             // Update session score
             foreach (Session session in dbSessions)
             {
-                if (session.Iduser == _idUser)
+                if (session.Idsession == _idsession)
                 {
                     session.Score = score;
                 }
@@ -153,13 +190,13 @@ namespace EnterpriseAssignment.Controllers
 
         [HttpPatch] // attribute
         [Route("highscore")]
-        public IActionResult UpdateHighScoresAlternate(int _idUser) // Has more techniques
+        public IActionResult UpdateHighScoresAlternate(int _idsession) // Has more techniques
         {
             // Get tables
-            var dbAnswers = context.Answers.Where(a => a.Iduser == _idUser).Select(a => new AnswerWithQuestion(a.AnswerCharacter, a.Idquestion)).ToList();
+            var dbAnswers = context.Answers.Where(a => a.Idsession == _idsession).Select(a => new AnswerWithQuestion(a.AnswerCharacter, a.Idquestion)).ToList();
 
-            var dbSessions = context.Sessions.FirstOrDefault(s => s.Iduser == _idUser);
-            var sessionOrder = context.Sessions.OrderBy(s => s.Iduser);
+            var dbSessions = context.Sessions.FirstOrDefault(s => s.Idsession == _idsession);
+            var sessionOrder = context.Sessions.OrderBy(s => s.Idsession);
 
             // Compare and increment score
             int score = 0;
@@ -189,8 +226,8 @@ namespace EnterpriseAssignment.Controllers
         [Route("sessions")]
         public IActionResult PostUserId(string myString)
         {
-            var userIds = context.Sessions.ToList();
-            return Ok(userIds);
+            var sessionIds = context.Sessions.ToList();
+            return Ok(sessionIds);
         }
     }
 

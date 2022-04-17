@@ -7,8 +7,7 @@ namespace EnterpriseAssignment.DatabaseContext
 {
     public partial class Category
     {
-        public int Idcategory { get; set; }
+        public int IdCategory { get; set; }
         public string CategoryName { get; set; }
-        public List<Question> QuestionList;
     }
 }

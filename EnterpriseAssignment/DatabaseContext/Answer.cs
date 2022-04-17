@@ -7,10 +7,10 @@ namespace EnterpriseAssignment.DatabaseContext
 {
     public partial class Answer
     {
-        public int Idanswer { get; set; }
-        public int? Idsession { get; set; }
-        public int? Idcategory { get; set; }
-        public int? Idquestion { get; set; }
-        public string AnswerCharacter { get; set; }
+        public int IdAnswer { get; set; }
+        public int? IdSession { get; set; }
+        public int? IdCategory { get; set; }
+        public int? IdQuestion { get; set; }
+        public string AnswerString { get; set; }
     }
 }

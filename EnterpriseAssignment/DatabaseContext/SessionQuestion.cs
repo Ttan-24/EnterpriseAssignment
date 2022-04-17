@@ -5,11 +5,13 @@ using System.Collections.Generic;
 
 namespace EnterpriseAssignment.DatabaseContext
 {
-    public partial class SessionQuestion
+    public partial class Sessionquestion
     {
-        public int Idsessionquestion { get; set; }
-        public int? Idsession { get; set; }
-        public int? Idquestion { get; set; }
+        public int IdSessionQuestion { get; set; }
+        public int? IdSession { get; set; }
+        public int? IdQuestion { get; set; }
         public int OrderIndex { get; set; }
+        public bool TextHintUsed { get; set; }
+        public bool LocationHintUsed { get; set; }
     }
 }

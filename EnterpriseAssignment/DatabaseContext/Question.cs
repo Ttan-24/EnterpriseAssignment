@@ -7,13 +7,15 @@ namespace EnterpriseAssignment.DatabaseContext
 {
     public partial class Question
     {
-        public int Idquestion { get; set; }
-        public int? Idcategory { get; set; }
+        public int IdQuestion { get; set; }
+        public int? IdCategory { get; set; }
         public string Prompt { get; set; }
         public string AnswerA { get; set; }
         public string AnswerB { get; set; }
         public string CorrectAnswer { get; set; }
-
-        public Category Category;
+        public float Longitude { get; set; }
+        public float Latitude { get; set; }
+        public bool hasLocation { get; set; }
+        public string Hint { get; set; }
     }
 }

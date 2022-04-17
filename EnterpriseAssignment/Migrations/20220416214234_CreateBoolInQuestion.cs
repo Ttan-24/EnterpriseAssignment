@@ -2,23 +2,23 @@
 
 namespace EnterpriseAssignment.Migrations
 {
-    public partial class NewColumn : Migration
+    public partial class CreateBoolInQuestion : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
-                name: "current_question_index",
-                table: "session",
-                type: "int",
+            migrationBuilder.AddColumn<bool>(
+                name: "hasLocation",
+                table: "question",
+                type: "tinyint(1)",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: false);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "current_question_index",
-                table: "session");
+                name: "hasLocation",
+                table: "question");
         }
     }
 }

@@ -158,7 +158,7 @@ namespace EnterpriseAssignment.Controllers
         ///////////////////////////// Session Scores /////////////////////////////
 
         [HttpGet]
-        [Route("score/{idsession}")]
+        [Route("session/{idsession}/score")]
         public IActionResult GetSessionScore(int idsession)
         {
             // Get session
@@ -205,17 +205,13 @@ namespace EnterpriseAssignment.Controllers
                 return StatusCode(500);
             }
 
-            // if db session == null {
-            //return NotFound("couldnt fine dbsession");
-              //  }
-
             // Return immediately if session is over
             if (dbSession.EndSession == true)
             {
                 string response = "Session has ended. Your score is " + dbSession.Score;
 
                 Dictionary<string, string> DictionaryLinks = new Dictionary<string, string>();
-                DictionaryLinks.Add("score", "https://localhost:44382/api/Enterprise/score/{idsession}");
+                DictionaryLinks.Add("score", "https://localhost:44382/api/Enterprise/session/{idsession}/score");
                 return Ok(new ApiResponse<string>(response, DictionaryLinks));
             }
 
@@ -255,7 +251,7 @@ namespace EnterpriseAssignment.Controllers
                 string response = "Session has ended. Your score is " + dbSession.Score;
 
                 Dictionary<string, string> links = new Dictionary<string, string>();
-                links.Add("score", "https://localhost:44382/api/Enterprise/score/{idsession}");
+                links.Add("score", "https://localhost:44382/api/Enterprise/session/{idsession}/score");
                 links.Add("high scores", "https://localhost:44382/api/Enterprise/sessions/scores");
                 return Ok(new ApiResponse<string>(response, links));
             }
@@ -333,7 +329,7 @@ namespace EnterpriseAssignment.Controllers
                     // Response
                     string response = "You answered correctly. Quiz now finished. Final score: " + dbSession.Score;
                     Dictionary<string, string> links = new Dictionary<string, string>();
-                    links.Add("score", "https://localhost:44382/api/Enterprise/score/{idsession}");
+                    links.Add("score", "https://localhost:44382/api/Enterprise/session/{idsession}/score");
                     links.Add("high scores", "https://localhost:44382/api/Enterprise/sessions/scores");
                     return Ok(new ApiResponse<string>(response, links));
                 }
@@ -343,7 +339,7 @@ namespace EnterpriseAssignment.Controllers
 
                     Dictionary<string, string> links = new Dictionary<string, string>();
                     links.Add("question", "https://localhost:44382/api/Enterprise/question/{idsession}");
-                    links.Add("score", "https://localhost:44382/api/Enterprise/score/{idsession}"); 
+                    links.Add("score", "https://localhost:44382/api/Enterprise/session/{idsession}/score"); 
                     return Ok(new ApiResponse<string>(response, links));
                 }
             }
@@ -370,7 +366,7 @@ namespace EnterpriseAssignment.Controllers
                 string response = "Session has ended. Your score is " + dbSession.Score;
 
                 Dictionary<string, string> DictionaryLinks = new Dictionary<string, string>();
-                DictionaryLinks.Add("score", "https://localhost:44382/api/Enterprise/score/{idsession}");
+                DictionaryLinks.Add("score", "https://localhost:44382/api/Enterprise/session/{idsession}/score");
                 DictionaryLinks.Add("high scores", "https://localhost:44382/api/Enterprise/sessions/scores");
                 return Ok(new ApiResponse<string>(response, DictionaryLinks));
             }

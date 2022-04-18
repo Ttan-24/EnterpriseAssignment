@@ -13,6 +13,9 @@ namespace EnterpriseAssignment.Controllers
     [Route("api/[controller]")]
     public class EnterpriseController : Controller
     {
+
+        ///////////////////////////// Set up /////////////////////////////
+        
         private readonly trivia_dbContext context;
     
         public EnterpriseController(trivia_dbContext context)
@@ -20,18 +23,9 @@ namespace EnterpriseAssignment.Controllers
             this.context = context;
         }
 
-        //[HttpGet] // attribute
-        //[Route("categories")]
-        //public IActionResult GetCategories()
-        //{
-        //    var categories = context.Categories.Include(c => c.QuestionList);
-        //    var categoryList = new List<CategoryWithQuestion>();
-        //    foreach (var category in categories)
-        //    {
-        //        categoryList.Add(new CategoryWithQuestion(category, category.QuestionList.Count));
-        //    }
-        //    return Ok(categoryList);
-        //}
+
+
+        ///////////////////////////// Categories /////////////////////////////
 
         [HttpGet] // attribute
         [Route("categories")]
@@ -41,13 +35,26 @@ namespace EnterpriseAssignment.Controllers
             List<Category> categories = context.Categories.ToList();
 
             // Return
-            return Ok(new ApiResponse<List<Category>>(categories, "session/{username}/{idcategory}/{questioncount}/{idapp}"));
+            Dictionary<string, string> links = new Dictionary<string, string>();
+            links.Add("create session", "https://localhost:44382/api/Enterprise/session/{username}/{idcategory}/{questioncount}/{idapp}");
+            return Ok(new ApiResponse<List<Category>>(categories, links));
         }
 
-        [HttpPut]
+
+
+        ///////////////////////////// Sessions /////////////////////////////
+
+        [HttpPost]
         [Route("session/{username}/{idcategory}/{questioncount}/{idapp}")]
         public IActionResult CreateSession(string username, int idcategory, int questioncount, string idapp)
         {
+            // Check for existing session
+            List<Session> existingSessions = context.Sessions.Where(s => s.Name == username && s.IdCategory == idcategory).ToList();
+            if (existingSessions.Count > 0)
+            {
+                return BadRequest("Error: session with username and category already exists.");
+            }
+
             // Get database table
             var dbSessions = context.Sessions;
             var questions = context.Questions.Where(q => q.IdCategory == idcategory).ToList();
@@ -111,10 +118,77 @@ namespace EnterpriseAssignment.Controllers
     
             // Save again
             context.SaveChanges();
-    
+
+
             // Return
-            return Ok(mySession);
+            Dictionary<string, string> links = new Dictionary<string, string>();
+            links.Add("question", "https://localhost:44382/api/Enterprise/question/{idsession}");
+            return Ok(new ApiResponse<Session>(mySession, links));
         }
+
+        [HttpGet]
+        [Route("session/{idsession}")]
+        public IActionResult GetSession(int idsession)
+        {
+            // Get sessions
+            Session session = context.Sessions.Where(s => s.IdSession == idsession).ToList().Single();
+
+            // Return sessions
+            Dictionary<string, string> links = new Dictionary<string, string>();
+            links.Add("sessions", "https://localhost:44382/api/Enterprise/sessions");
+            return Ok(new ApiResponse<Session>(session, links));
+        }
+
+        [HttpGet]
+        [Route("sessions")]
+        public IActionResult GetSessions()
+        {
+            // Get sessions
+            List<Session> sessions = context.Sessions.ToList();
+
+            // Return sessions
+            Dictionary<string, string> links = new Dictionary<string, string>();
+            links.Add("session", "https://localhost:44382/api/Enterprise/sessions/{idsession}");
+            links.Add("scores", "https://localhost:44382/api/Enterprise/sessions/scores");
+            return Ok(new ApiResponse<List<Session>>(sessions, links));
+        }
+
+
+
+        ///////////////////////////// Session Scores /////////////////////////////
+
+        [HttpGet]
+        [Route("score/{idsession}")]
+        public IActionResult GetSessionScore(int idsession)
+        {
+            // Get session
+            Session dbSession = context.Sessions.Where(session => session.IdSession == idsession).Single();
+
+            // Get score
+            int score = dbSession.Score;
+
+            // Return score
+            Dictionary<string, string> links = new Dictionary<string, string>();
+            links.Add("scores", "https://localhost:44382/api/Enterprise/sessions/scores");
+            return Ok(new ApiResponse<int>(score, links));
+        }
+
+        [HttpGet] // attribute
+        [Route("sessions/scores")]
+        public IActionResult GetHighScores() // Has more techniques
+        {
+            // Get tables
+            List<SessionAsHighscore> dbSessions = context.Sessions.OrderByDescending(session => session.Score).Select(s => new SessionAsHighscore(s.AppId, s.Name, s.Score)).ToList();
+
+            // Return
+            Dictionary<string, string> links = new Dictionary<string, string>();
+            links.Add("session", "https://localhost:44382/api/Enterprise/sessions");
+            return Ok(new ApiResponse<List<SessionAsHighscore>>(dbSessions, links));
+        }
+
+
+
+        ///////////////////////////// Questions /////////////////////////////
 
         [HttpGet] // attribute
         [Route("question/{idsession}")]
@@ -128,7 +202,7 @@ namespace EnterpriseAssignment.Controllers
             }
             catch (InvalidOperationException)
             {
-                return StatusCode(200);
+                return StatusCode(500);
             }
 
             // if db session == null {
@@ -138,7 +212,11 @@ namespace EnterpriseAssignment.Controllers
             // Return immediately if session is over
             if (dbSession.EndSession == true)
             {
-                return Ok("Session has ended. Your score is " + dbSession.Score);
+                string response = "Session has ended. Your score is " + dbSession.Score;
+
+                Dictionary<string, string> DictionaryLinks = new Dictionary<string, string>();
+                DictionaryLinks.Add("score", "https://localhost:44382/api/Enterprise/score/{idsession}");
+                return Ok(new ApiResponse<string>(response, DictionaryLinks));
             }
 
             // Get session question
@@ -151,15 +229,22 @@ namespace EnterpriseAssignment.Controllers
             Question question = context.Questions.Where(question => question.IdQuestion == sessionQuestion.IdQuestion).Single();
 
             // Get question text
-            string text = question.Prompt + "\n A) " + question.AnswerA + "\n B) " + question.AnswerB;
+            string text = question.Prompt;
+            if (!question.HasPicture)
+            {
+                text += "\n A) " + question.AnswerA + "\n B) " + question.AnswerB + "\n C) " + question.AnswerC + "\n D) " + question.AnswerD;
+            }
 
             // Return question
-            return Ok(text);
+            Dictionary<string, string> links = new Dictionary<string, string>();
+            links.Add("answer", "https://localhost:44382/api/Enterprise/questions/{idsession}/{answercharacter}");
+            links.Add("hint", "https://localhost:44382/api/Enterprise/questions/{idsession}/question/textHint/{idsession}");
+            return Ok(new ApiResponse<string>(text, links));
         }
     
         [HttpPut]
-        [Route("answers/{idsession}/{answercharacter}")]
-        public IActionResult PostAnswer(int idsession, string answercharacter)
+        [Route("questions/{idsession}/{answercharacter}")]
+        public IActionResult AnswerQuestion(int idsession, string answercharacter)
         {
             // Get session
             Session dbSession = context.Sessions.Where(session => session.IdSession == idsession).FirstOrDefault();
@@ -167,7 +252,12 @@ namespace EnterpriseAssignment.Controllers
             // Return immediately if session is over
             if (dbSession.EndSession == true)
             {
-                return Ok("Session has ended. Your score is " + dbSession.Score);
+                string response = "Session has ended. Your score is " + dbSession.Score;
+
+                Dictionary<string, string> links = new Dictionary<string, string>();
+                links.Add("score", "https://localhost:44382/api/Enterprise/score/{idsession}");
+                links.Add("high scores", "https://localhost:44382/api/Enterprise/sessions/scores");
+                return Ok(new ApiResponse<string>(response, links));
             }
 
             // Get session question
@@ -193,13 +283,21 @@ namespace EnterpriseAssignment.Controllers
                 // move to next question 
                 dbSession.CurrentQuestionIndex++;
                 context.SaveChanges();
-                return Ok("You have passed on this question");
+                string response = "You have passed on this question";
+
+                Dictionary<string, string> links = new Dictionary<string, string>();
+                links.Add("question", "https://localhost:44382/api/Enterprise/question/{idsession}");
+                return Ok(new ApiResponse<string>(response, links));
             }
 
             // Location fail
             if (dbQuestion.hasLocation == true && inRange == false)
             {
-                return Ok("You are in the wrong location");
+                string response = "You are in the wrong location";
+
+                Dictionary<string, string> links = new Dictionary<string, string>();
+                links.Add("question", "https://localhost:44382/api/Enterprise/session/{idsession}/location/{latitude}/{longitude}");
+                return Ok(new ApiResponse<string>(response, links));
             }
 
             // Correct/incorrect answer
@@ -220,76 +318,48 @@ namespace EnterpriseAssignment.Controllers
                 // Return
                 if (dbSession.CurrentQuestionIndex >= dbSession.QuestionCount)
                 {
+                    // End session
                     dbSession.EndSession = true;
+
+                    // Delete session questions
+                    var sessionQuestions = context.Sessionquestions;
+                    var sessionQuestionsToDelete = context.Sessionquestions.Where(s => s.IdSession == dbSession.IdSession);
+                    foreach(Sessionquestion sessionQuestion in sessionQuestionsToDelete)
+                    {
+                        sessionQuestions.Remove(sessionQuestion);
+                    }
                     context.SaveChanges();
-                    return Ok("You answered correctly. Quiz now finished. Final score: " + dbSession.Score);
+
+                    // Response
+                    string response = "You answered correctly. Quiz now finished. Final score: " + dbSession.Score;
+                    Dictionary<string, string> links = new Dictionary<string, string>();
+                    links.Add("score", "https://localhost:44382/api/Enterprise/score/{idsession}");
+                    links.Add("high scores", "https://localhost:44382/api/Enterprise/sessions/scores");
+                    return Ok(new ApiResponse<string>(response, links));
                 }
                 else
                 {
-                    return Ok("You answered correctly. Score now: " + dbSession.Score);
+                    string response = "You answered correctly. Score now: " + dbSession.Score;
+
+                    Dictionary<string, string> links = new Dictionary<string, string>();
+                    links.Add("question", "https://localhost:44382/api/Enterprise/question/{idsession}");
+                    links.Add("score", "https://localhost:44382/api/Enterprise/score/{idsession}"); 
+                    return Ok(new ApiResponse<string>(response, links));
                 }
             }
             else
             {
-                return Ok("You answered incorrectly");
+                string response = "You answered incorrectly. Score remains: " + dbSession.Score;
+                return Ok(new ApiResponse<string>(response, new Dictionary<string, string>()));
             }
         }
-    
-        //[HttpPatch] // attribute
-        //[Route("score")]
-        //public IActionResult UpdateHighScore(int _idsession)
-        //{
-        //    // Get tables
-        //    var dbAnswers = context.Answers.ToList<Answer>();
-        //    var dbQuestions = context.Questions.ToList<Question>();
-        //    var dbSessions = context.Sessions.ToList<Session>();
-        //
-        //    // Compare and increment score
-        //    int score = 0;
-        //    foreach (var answer in dbAnswers)
-        //    {
-        //        foreach (var question in dbQuestions)
-        //        {
-        //            if (answer.IdSession == _idsession &&
-        //                answer.IdQuestion == question.IdQuestion &&
-        //                answer.IdCategory == question.IdCategory &&
-        //                answer.AnswerString == question.CorrectAnswer)
-        //            {
-        //                score++;
-        //            }
-        //        }
-        //    }
-        //
-        //    // Update session score
-        //    foreach (Session session in dbSessions)
-        //    {
-        //        if (session.IdSession == _idsession)
-        //        {
-        //            session.Score = score;
-        //        }
-        //    }
-        //
-        //    // Save
-        //    context.SaveChanges();
-        //
-        //    // Return
-        //    return Ok(score);
-        //}
 
-        [HttpPatch] // attribute
-        [Route("updateLocation/{idsession}/{latitude}/{longitude}")]
-        public IActionResult UpdateLocation(int latitude, int longitude, int idsession)
-        {
-            // Get tables
-            Session dbSession = context.Sessions.Where(session => session.IdSession == idsession).Single();
-            dbSession.Latitude = latitude;
-            dbSession.Longitude = longitude;
-            context.SaveChanges();
-            return Ok();
-        }
+
+
+        ///////////////////////////// Question Hints /////////////////////////////
 
         [HttpGet] // attribute
-        [Route("hint")]
+        [Route("question/textHint/{idsession}")]
         public IActionResult GetHint(int idsession)
         {
             Session dbSession = context.Sessions.Where(session => session.IdSession == idsession).Single();
@@ -297,7 +367,12 @@ namespace EnterpriseAssignment.Controllers
             // Return immediately if session is over
             if (dbSession.EndSession == true)
             {
-                return Ok("Session has ended. Your score is " + dbSession.Score);
+                string response = "Session has ended. Your score is " + dbSession.Score;
+
+                Dictionary<string, string> DictionaryLinks = new Dictionary<string, string>();
+                DictionaryLinks.Add("score", "https://localhost:44382/api/Enterprise/score/{idsession}");
+                DictionaryLinks.Add("high scores", "https://localhost:44382/api/Enterprise/sessions/scores");
+                return Ok(new ApiResponse<string>(response, DictionaryLinks));
             }
 
             Sessionquestion sessionQuestion = context.Sessionquestions
@@ -310,13 +385,16 @@ namespace EnterpriseAssignment.Controllers
             string hint = question.Hint;
 
             sessionQuestion.TextHintUsed = true;
-            
+
             context.SaveChanges();
-            return Ok(hint);
+
+            Dictionary<string, string> links = new Dictionary<string, string>();
+            links.Add("question", "https://localhost:44382/api/Enterprise/question/{idsession}");
+            return Ok(new ApiResponse<string>(hint, links));
         }
 
         [HttpGet] // attribute
-        [Route("locationHint/{idsession}")]
+        [Route("session/{idsession}/sessionquestion/locationHint/")]
         public IActionResult GetLocationHint(int idsession)
         {
             // Get session
@@ -325,7 +403,8 @@ namespace EnterpriseAssignment.Controllers
             // Return immediately if session is over
             if (dbSession.EndSession == true)
             {
-                return Ok("Session has ended. Your score is " + dbSession.Score);
+                string response = "Session has ended. Your score is " + dbSession.Score;
+                return Ok(new ApiResponse<string>(response, new Dictionary<string, string>()));
             }
 
             // Get session question
@@ -338,8 +417,8 @@ namespace EnterpriseAssignment.Controllers
             Question question = context.Questions.Where(question => question.IdQuestion == sessionQuestion.IdQuestion).Single();
 
             // Get location
-            float latitude  = question.Latitude;
-            float longitude = question.Latitude;
+            float latitude = question.Latitude;
+            float longitude = question.Longitude;
 
             // Set hit to used
             sessionQuestion.LocationHintUsed = true;
@@ -348,80 +427,32 @@ namespace EnterpriseAssignment.Controllers
             context.SaveChanges();
 
             // Return
-            return Ok("Latitude: " + latitude + ", longitude: " + longitude);
+            Dictionary<string, string> links = new Dictionary<string, string>();
+            links.Add("session", "https://localhost:44382/api/Enterprise/sessions");
+            links.Add("question", "https://localhost:44382/api/Enterprise/question/{idsession}");
+            return Ok(new ApiResponse<Location>(new Location(latitude, longitude), links));
         }
 
-        [HttpGet] // attribute
-        [Route("highscores")]
-        public IActionResult GetHighScores() // Has more techniques
+        ///////////////////////////// Location /////////////////////////////
+
+        [HttpPatch] // attribute
+        [Route("session/{idsession}/location/{latitude}/{longitude}")]
+        public IActionResult UpdateLocation(int latitude, int longitude, int idsession)
         {
             // Get tables
-            var dbSessions = context.Sessions.OrderByDescending(session => session.Score).ToList();
-    
-            // Return
-            return Ok(dbSessions);
-        }
-    
-        //[HttpPatch] // attribute
-        //[Route("highscore")]
-        //public IActionResult UpdateHighScoresAlternate(int _idsession) // Has more techniques
-        //{
-        //    // Get tables
-        //    var dbAnswers = context.Answers.Where(a => a.IdSession == _idsession).Select(a => new AnswerWithQuestion(a.AnswerString, a.IdQuestion)).ToList();
-        //    var dbSessions = context.Sessions.FirstOrDefault(s => s.IdSession == _idsession);
-        //    var sessionOrder = context.Sessions.OrderBy(s => s.IdSession);
-        //
-        //    // Compare and increment score
-        //    int score = 0;
-        //    foreach (var answer in dbAnswers)
-        //    {
-        //        var question = context.Questions.FirstOrDefault(q => q.IdQuestion == answer.IdQuestion);
-        //
-        //        if (answer.AnswerCharacter == question.CorrectAnswer)
-        //        {
-        //            score++;
-        //        }
-        //    }
-        //
-        //    // Update session score
-        //    dbSessions.Score = score;
-        //
-        //
-        //    // Save
-        //    context.SaveChanges();
-        //
-        //    // Return
-        //    return Ok(score);
-        //}
-    
-        [HttpGet]
-        [Route("sessions")]
-        public IActionResult GetSessions(string myString)
-        {
-            // Get sessions
-            var sessions = context.Sessions.ToList();
-
-            // Return sessions
-            return Ok(sessions);
-        }
-
-        [HttpGet]
-        [Route("score/{idsession}")]
-        public IActionResult GetSessionScore(int idsession)
-        {
-            // Get session
             Session dbSession = context.Sessions.Where(session => session.IdSession == idsession).Single();
-
-            // Get score
-            int score = dbSession.Score;
-
-            // Return score
-            return Ok(new ApiResponse<int>(score, "categories"));
+            dbSession.Latitude = latitude;
+            dbSession.Longitude = longitude;
+            context.SaveChanges();
+            return Ok();
         }
     }
     
     // making a model
     public record CategoryWithQuestion(Category Categories, int QuestionCount);
     public record AnswerWithQuestion(string AnswerCharacter, int? IdQuestion); 
-    public record ApiResponse<T>(T Value, string Link); 
+    public record ApiResponse<T>(T body, Dictionary<string, string> links);
+
+    public record SessionAsHighscore(string appId, string username, int score);
+    public record Location(float latitude, float longitude);
 }

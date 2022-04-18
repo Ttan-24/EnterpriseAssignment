@@ -17,5 +17,6 @@ namespace EnterpriseAssignment.DatabaseContext
         public float Latitude { get; set; }
         public bool hasLocation { get; set; }
         public string Hint { get; set; }
+        public bool HasPicture { get; set; }
     }
 }

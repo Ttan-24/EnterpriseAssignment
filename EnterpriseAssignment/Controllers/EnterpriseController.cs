@@ -37,32 +37,30 @@ namespace EnterpriseAssignment.Controllers
         [Route("categories")]
         public IActionResult GetCategories()
         {
-            var categories = context.Categories;
-            var categoryList = new List<Category>();
-            foreach (var category in categories)
-            {
-                categoryList.Add(category);
-            }
-            return Ok(categoryList);
+            // Get categories
+            List<Category> categories = context.Categories.ToList();
+
+            // Return
+            return Ok(new ApiResponse<List<Category>>(categories, "session/{username}/{idcategory}/{questioncount}/{idapp}"));
         }
 
         [HttpPut]
-        [Route("session")]
-        public IActionResult CreateSession(string _username, int _categoryId, int _questionCount, string _appId)
+        [Route("session/{username}/{idcategory}/{questioncount}/{idapp}")]
+        public IActionResult CreateSession(string username, int idcategory, int questioncount, string idapp)
         {
             // Get database table
             var dbSessions = context.Sessions;
-            var questions = context.Questions.Where(q => q.IdCategory == _categoryId).ToList();
+            var questions = context.Questions.Where(q => q.IdCategory == idcategory).ToList();
             var dbSessionQuestions = context.Sessionquestions;
     
             // Get answer from http
             Session mySession = new Session();
-            mySession.Name = _username;
+            mySession.Name = username;
             mySession.Score = 0;
-            mySession.IdCategory = _categoryId;
+            mySession.IdCategory = idcategory;
             mySession.CurrentQuestionIndex = 0;
-            mySession.QuestionCount = _questionCount;
-            mySession.AppId = _appId;
+            mySession.QuestionCount = questioncount;
+            mySession.AppId = idapp;
 
             // Add to table
             dbSessions.Add(mySession);
@@ -71,11 +69,25 @@ namespace EnterpriseAssignment.Controllers
             context.SaveChanges();
     
             // Get session again now that it has a userId
-            Session newSession = context.Sessions.Where(s => s.Name == _username).ToList().First();
-    
+            Session newSession = context.Sessions.Where(s => s.Name == username).ToList().First();
+
+            // Shuffle question list
+            Random random = new Random();
+            List<Question> randomQuestionList = new List<Question>();
+            while (questions.Count > 0)
+            {
+                // Get random index  
+                int index = random.Next(questions.Count);
+
+                // Move to randomised list
+                randomQuestionList.Add(questions[index]);
+                questions.RemoveAt(index);
+            }
+            questions = randomQuestionList;
+
             // Create questions for session
             List<Sessionquestion> sessionQuestions = new List<Sessionquestion>();
-            float questionCount = MathF.Min(questions.Count, _questionCount);
+            float questionCount = MathF.Min(questions.Count, questioncount);
             for (int i = 0; i < questionCount; i++)
             {
                 // Get question
@@ -90,7 +102,7 @@ namespace EnterpriseAssignment.Controllers
                 // Add to list
                 sessionQuestions.Add(sessionQuestion);
             }
-    
+
             // Add new session questions
             foreach (Sessionquestion sessionQuestion in sessionQuestions)
             {
@@ -103,13 +115,25 @@ namespace EnterpriseAssignment.Controllers
             // Return
             return Ok(mySession);
         }
-    
+
         [HttpGet] // attribute
-        [Route("question")]
-        public IActionResult GetQuestion(int _sessionID)
+        [Route("question/{idsession}")]
+        public IActionResult GetQuestion(int idsession)
         {
             // Get session
-            Session dbSession = context.Sessions.Where(session => session.IdSession == _sessionID).FirstOrDefault();
+            Session dbSession;
+            try
+            {
+                dbSession = context.Sessions.Where(session => session.IdSession == idsession).Single();
+            }
+            catch (InvalidOperationException)
+            {
+                return StatusCode(200);
+            }
+
+            // if db session == null {
+            //return NotFound("couldnt fine dbsession");
+              //  }
 
             // Return immediately if session is over
             if (dbSession.EndSession == true)
@@ -134,11 +158,11 @@ namespace EnterpriseAssignment.Controllers
         }
     
         [HttpPut]
-        [Route("answers")]
-        public IActionResult PostAnswer(int _sessionID, string _answerCharacter)
+        [Route("answers/{idsession}/{answercharacter}")]
+        public IActionResult PostAnswer(int idsession, string answercharacter)
         {
             // Get session
-            Session dbSession = context.Sessions.Where(session => session.IdSession == _sessionID).FirstOrDefault();
+            Session dbSession = context.Sessions.Where(session => session.IdSession == idsession).FirstOrDefault();
 
             // Return immediately if session is over
             if (dbSession.EndSession == true)
@@ -164,7 +188,7 @@ namespace EnterpriseAssignment.Controllers
             }
 
             // Pass
-            if (dbQuestion.CorrectAnswer == "PASS")
+            if (answercharacter == "PASS")
             {
                 // move to next question 
                 dbSession.CurrentQuestionIndex++;
@@ -179,7 +203,7 @@ namespace EnterpriseAssignment.Controllers
             }
 
             // Correct/incorrect answer
-            if (dbQuestion.CorrectAnswer == _answerCharacter)
+            if (dbQuestion.CorrectAnswer == answercharacter || dbQuestion.HasPicture == true)
             {
                 // Get score to add
                 int scoreToAdd = 2;
@@ -211,64 +235,64 @@ namespace EnterpriseAssignment.Controllers
             }
         }
     
-        [HttpPatch] // attribute
-        [Route("score")]
-        public IActionResult UpdateHighScore(int _idsession)
-        {
-            // Get tables
-            var dbAnswers = context.Answers.ToList<Answer>();
-            var dbQuestions = context.Questions.ToList<Question>();
-            var dbSessions = context.Sessions.ToList<Session>();
-    
-            // Compare and increment score
-            int score = 0;
-            foreach (var answer in dbAnswers)
-            {
-                foreach (var question in dbQuestions)
-                {
-                    if (answer.IdSession == _idsession &&
-                        answer.IdQuestion == question.IdQuestion &&
-                        answer.IdCategory == question.IdCategory &&
-                        answer.AnswerString == question.CorrectAnswer)
-                    {
-                        score++;
-                    }
-                }
-            }
-    
-            // Update session score
-            foreach (Session session in dbSessions)
-            {
-                if (session.IdSession == _idsession)
-                {
-                    session.Score = score;
-                }
-            }
-    
-            // Save
-            context.SaveChanges();
-    
-            // Return
-            return Ok(score);
-        }
+        //[HttpPatch] // attribute
+        //[Route("score")]
+        //public IActionResult UpdateHighScore(int _idsession)
+        //{
+        //    // Get tables
+        //    var dbAnswers = context.Answers.ToList<Answer>();
+        //    var dbQuestions = context.Questions.ToList<Question>();
+        //    var dbSessions = context.Sessions.ToList<Session>();
+        //
+        //    // Compare and increment score
+        //    int score = 0;
+        //    foreach (var answer in dbAnswers)
+        //    {
+        //        foreach (var question in dbQuestions)
+        //        {
+        //            if (answer.IdSession == _idsession &&
+        //                answer.IdQuestion == question.IdQuestion &&
+        //                answer.IdCategory == question.IdCategory &&
+        //                answer.AnswerString == question.CorrectAnswer)
+        //            {
+        //                score++;
+        //            }
+        //        }
+        //    }
+        //
+        //    // Update session score
+        //    foreach (Session session in dbSessions)
+        //    {
+        //        if (session.IdSession == _idsession)
+        //        {
+        //            session.Score = score;
+        //        }
+        //    }
+        //
+        //    // Save
+        //    context.SaveChanges();
+        //
+        //    // Return
+        //    return Ok(score);
+        //}
 
         [HttpPatch] // attribute
-        [Route("updateLocation")]
-        public IActionResult UpdateLocation(int _latitude, int _longitude, int sessionId)
+        [Route("updateLocation/{idsession}/{latitude}/{longitude}")]
+        public IActionResult UpdateLocation(int latitude, int longitude, int idsession)
         {
             // Get tables
-            Session dbSession = context.Sessions.Where(session => session.IdSession == sessionId).Single();
-            dbSession.Latitude = _latitude;
-            dbSession.Longitude = _longitude;
+            Session dbSession = context.Sessions.Where(session => session.IdSession == idsession).Single();
+            dbSession.Latitude = latitude;
+            dbSession.Longitude = longitude;
             context.SaveChanges();
             return Ok();
         }
 
         [HttpGet] // attribute
         [Route("hint")]
-        public IActionResult GetHint(int _idSession)
+        public IActionResult GetHint(int idsession)
         {
-            Session dbSession = context.Sessions.Where(session => session.IdSession == _idSession).Single();
+            Session dbSession = context.Sessions.Where(session => session.IdSession == idsession).Single();
 
             // Return immediately if session is over
             if (dbSession.EndSession == true)
@@ -292,10 +316,11 @@ namespace EnterpriseAssignment.Controllers
         }
 
         [HttpGet] // attribute
-        [Route("locationHint")]
-        public IActionResult GetLocationHint(int _idSession)
+        [Route("locationHint/{idsession}")]
+        public IActionResult GetLocationHint(int idsession)
         {
-            Session dbSession = context.Sessions.Where(session => session.IdSession == _idSession).Single();
+            // Get session
+            Session dbSession = context.Sessions.Where(session => session.IdSession == idsession).Single();
 
             // Return immediately if session is over
             if (dbSession.EndSession == true)
@@ -303,19 +328,26 @@ namespace EnterpriseAssignment.Controllers
                 return Ok("Session has ended. Your score is " + dbSession.Score);
             }
 
+            // Get session question
             Sessionquestion sessionQuestion = context.Sessionquestions
                 .Where(q => q.IdSession == dbSession.IdSession)
                 .Where(q => q.OrderIndex == dbSession.CurrentQuestionIndex)
                 .ToList().FirstOrDefault();
 
+            // Get question
             Question question = context.Questions.Where(question => question.IdQuestion == sessionQuestion.IdQuestion).Single();
 
+            // Get location
             float latitude  = question.Latitude;
             float longitude = question.Latitude;
 
+            // Set hit to used
             sessionQuestion.LocationHintUsed = true;
 
+            // Save changes
             context.SaveChanges();
+
+            // Return
             return Ok("Latitude: " + latitude + ", longitude: " + longitude);
         }
 
@@ -330,59 +362,66 @@ namespace EnterpriseAssignment.Controllers
             return Ok(dbSessions);
         }
     
-        [HttpPatch] // attribute
-        [Route("highscore")]
-        public IActionResult UpdateHighScoresAlternate(int _idsession) // Has more techniques
-        {
-            // Get tables
-            var dbAnswers = context.Answers.Where(a => a.IdSession == _idsession).Select(a => new AnswerWithQuestion(a.AnswerString, a.IdQuestion)).ToList();
-    
-            var dbSessions = context.Sessions.FirstOrDefault(s => s.IdSession == _idsession);
-            var sessionOrder = context.Sessions.OrderBy(s => s.IdSession);
-    
-            // Compare and increment score
-            int score = 0;
-            foreach (var answer in dbAnswers)
-            {
-                var question = context.Questions.FirstOrDefault(q => q.IdQuestion == answer.IdQuestion);
-    
-                if (answer.AnswerCharacter == question.CorrectAnswer)
-                {
-                    score++;
-                }
-            }
-    
-            // Update session score
-    
-            dbSessions.Score = score;
-    
-    
-            // Save
-            context.SaveChanges();
-    
-            // Return
-            return Ok(score);
-        }
+        //[HttpPatch] // attribute
+        //[Route("highscore")]
+        //public IActionResult UpdateHighScoresAlternate(int _idsession) // Has more techniques
+        //{
+        //    // Get tables
+        //    var dbAnswers = context.Answers.Where(a => a.IdSession == _idsession).Select(a => new AnswerWithQuestion(a.AnswerString, a.IdQuestion)).ToList();
+        //    var dbSessions = context.Sessions.FirstOrDefault(s => s.IdSession == _idsession);
+        //    var sessionOrder = context.Sessions.OrderBy(s => s.IdSession);
+        //
+        //    // Compare and increment score
+        //    int score = 0;
+        //    foreach (var answer in dbAnswers)
+        //    {
+        //        var question = context.Questions.FirstOrDefault(q => q.IdQuestion == answer.IdQuestion);
+        //
+        //        if (answer.AnswerCharacter == question.CorrectAnswer)
+        //        {
+        //            score++;
+        //        }
+        //    }
+        //
+        //    // Update session score
+        //    dbSessions.Score = score;
+        //
+        //
+        //    // Save
+        //    context.SaveChanges();
+        //
+        //    // Return
+        //    return Ok(score);
+        //}
     
         [HttpGet]
         [Route("sessions")]
-        public IActionResult PostUserId(string myString)
+        public IActionResult GetSessions(string myString)
         {
-            var sessionIds = context.Sessions.ToList();
-            return Ok(sessionIds);
+            // Get sessions
+            var sessions = context.Sessions.ToList();
+
+            // Return sessions
+            return Ok(sessions);
         }
 
         [HttpGet]
-        [Route("score")]
-        public IActionResult GetSessionScore(int _idSession)
+        [Route("score/{idsession}")]
+        public IActionResult GetSessionScore(int idsession)
         {
-            Session dbSession = context.Sessions.Where(session => session.IdSession == _idSession).Single();
+            // Get session
+            Session dbSession = context.Sessions.Where(session => session.IdSession == idsession).Single();
+
+            // Get score
             int score = dbSession.Score;
-            return Ok(score);
+
+            // Return score
+            return Ok(new ApiResponse<int>(score, "categories"));
         }
     }
     
     // making a model
     public record CategoryWithQuestion(Category Categories, int QuestionCount);
     public record AnswerWithQuestion(string AnswerCharacter, int? IdQuestion); 
+    public record ApiResponse<T>(T Value, string Link); 
 }

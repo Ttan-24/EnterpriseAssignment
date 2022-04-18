@@ -3,14 +3,16 @@ using System;
 using EnterpriseAssignment.DatabaseContext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EnterpriseAssignment.Migrations
 {
     [DbContext(typeof(trivia_dbContext))]
-    partial class trivia_dbContextModelSnapshot : ModelSnapshot
+    [Migration("20220417144753_CreateHasPicture")]
+    partial class CreateHasPicture
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
